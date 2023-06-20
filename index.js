@@ -33,12 +33,12 @@ async function getLogin() {
 
 
     let data = {
-        "id": "12", 
-        "jsonrpc": "2.0", 
-        "method": "Login", 
-        "params": { 
-            "UserName": encryptedPassword, 
-            "Password": encryptedPassword 
+        "id": "12",
+        "jsonrpc": "2.0",
+        "method": "Login",
+        "params": {
+            "UserName": encryptedPassword,
+            "Password": encryptedPassword
         }
     }
     let config = {
@@ -96,14 +96,14 @@ async function getSMS(token, page, key) {
 }
 
 
-async function deleteSMS(token, smsIds){
+async function deleteSMS(token, smsIds) {
 
-    let data = { 
-        "id":"12",
-        "jsonrpc":"2.0",
-        "method":"DeleteSMS",
-        "params":{
-            "DelFlag":3,
+    let data = {
+        "id": "12",
+        "jsonrpc": "2.0",
+        "method": "DeleteSMS",
+        "params": {
+            "DelFlag": 3,
             "SMSArray": smsIds
         }
     }
@@ -120,10 +120,14 @@ async function deleteSMS(token, smsIds){
     return response.data
 }
 
-async function deleteAllInboxSMS(token){
+async function deleteAllInboxSMS(token) {
     let smsList = await getSMS(token, 0, 'inbox')
-    let smsIds = smsList.result?.SMSList.map(sms => sms.SMSId)
-    if(smsIds === undefined) {
+    if (smsList.result.SMSList === undefined) {
+        console.log('no sms found')
+        return
+    }
+    let smsIds = smsList.result.SMSList.map(sms => sms.SMSId)
+    if (smsIds === undefined) {
         console.log('no sms found')
         return
     }
@@ -131,10 +135,15 @@ async function deleteAllInboxSMS(token){
     console.log(deletedSMS)
 }
 
-async function delteAllSentSMS(token){
+async function delteAllSentSMS(token) {
     let smsList = await getSMS(token, 0, 'send')
-    let smsIds = smsList.result?.SMSList.map(sms => sms.SMSId)
-    if(smsIds === undefined) {
+    if (smsList.result.SMSList === undefined) {
+        console.log('no sms found')
+        return
+    }
+    let smsIds = smsList.result.SMSList.map(sms => sms.SMSId)
+
+    if (smsIds === undefined) {
         console.log('no sms found')
         return
     }
@@ -143,7 +152,7 @@ async function delteAllSentSMS(token){
 }
 
 
-async function deleteAllSMS(token){
+async function deleteAllSMS(token) {
     await deleteAllInboxSMS(token)
     await delteAllSentSMS(token)
 }
@@ -153,25 +162,32 @@ async function main() {
     let login = await getLogin()
     let token = await encrypt(login.result.token.toString())
 
-    let allSms = await getSMS(token, 0, 'inbox')
-    let SMSList  = allSms?.result?.SMSList
+    try {
+        let allSms = await getSMS(token, 0, 'inbox')
 
-    // search the SMSList.SMSContent for 80%
-    let str = SMSList?.filter(sms => sms.SMSContent.includes('80%') || sms.SMSContent.includes('100%'))
+        if (allSms.result.SMSList === undefined) {
+            console.log('no sms found')
+            return
+        }
+        let SMSList = allSms.result.SMSList
 
-    let date = new Date()
-    if(str?.length > 0){
-        console.log(date.toISOString(), 'found 80%')
-        await deleteAllSMS(token)
-        
-        let sentSMS = await sendSMS(token, '1266', 'NL2000 AAN')
-        console.log(sentSMS)
-    }else{
-        console.log(date.toISOString(), 'no 80% found')
+        let str = SMSList.filter(sms => sms.SMSContent.includes('80%') || sms.SMSContent.includes('100%'))
+
+        let date = new Date()
+        if (str.length > 0) {
+            await deleteAllSMS(token)
+
+            let sentSMS = await sendSMS(token, '1266', 'NL2000 AAN')
+            console.log(sentSMS)
+            console.log(date.toISOString(), 'Renew data SMS sent')
+        } else {
+            console.log(date.toISOString(), 'No data expiration SMS found.')
+        }
+
+    } catch (error) {
+        console.log(error)
+        return
     }
-
-
-
 }
 
 
